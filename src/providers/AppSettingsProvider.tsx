@@ -1,0 +1,68 @@
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { useColorScheme } from 'react-native';
+import { getUserProfile, setUserProfile } from '@/shared/utils/helper';
+import type { AppUserSettings } from '@/shared/types/AppUser';
+import { supabase } from '@/shared/utils/supabaseClient';
+import { useAuth } from './AuthProvider';
+
+// Subset of Settings that's relevant natively (darkMode handled by system; no DOM)
+export interface AppSettings {
+  sound: boolean;
+  autoTimer: boolean;
+  darkMode: boolean; // read from system via useColorScheme; stored for Supabase parity
+  shareProgress: boolean;
+  aiProvider: string;
+  aiCustomPrompt: string;
+}
+
+const DEFAULT_SETTINGS: AppSettings = {
+  sound: true,
+  autoTimer: true,
+  darkMode: false,
+  shareProgress: true,
+  aiProvider: 'chatgpt',
+  aiCustomPrompt: '',
+};
+
+interface AppSettingsContextType {
+  settings: AppSettings;
+  updateSetting: <K extends keyof AppSettings>(key: K, value: AppSettings[K]) => void;
+}
+
+const AppSettingsContext = createContext<AppSettingsContextType | undefined>(undefined);
+
+export function AppSettingsProvider({ children }: { children: React.ReactNode }) {
+  const { isLogin } = useAuth();
+  const [settings, setSettings] = useState<AppSettings>(() => {
+    const profile = getUserProfile();
+    return { ...DEFAULT_SETTINGS, ...(profile?.settings as Partial<AppSettings> ?? {}) };
+  });
+
+  const updateSetting = <K extends keyof AppSettings>(key: K, value: AppSettings[K]) => {
+    setSettings(prev => ({ ...prev, [key]: value }));
+  };
+
+  // Persist to MMKV + Supabase on change (debounced via setTimeout)
+  useEffect(() => {
+    const profile = getUserProfile();
+    if (profile) setUserProfile({ ...profile, settings: settings as unknown as AppUserSettings });
+
+    if (!isLogin) return;
+    const timer = setTimeout(() => {
+      supabase.from('users').update({ settings }).eq('id', profile?.id ?? '').then();
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, [settings, isLogin]);
+
+  return (
+    <AppSettingsContext.Provider value={{ settings, updateSetting }}>
+      {children}
+    </AppSettingsContext.Provider>
+  );
+}
+
+export function useAppSettings(): AppSettingsContextType {
+  const ctx = useContext(AppSettingsContext);
+  if (!ctx) throw new Error('useAppSettings must be used within AppSettingsProvider');
+  return ctx;
+}
