@@ -7,6 +7,8 @@ export interface SubjectStat {
     revisionAttemptedQuestionIds: Set<string>;
     attempted: number;
     totalAvailable: number;
+    icon_name?: string;
+    theme_color?: string;
 }
 
 export interface Streaks {

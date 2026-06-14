@@ -9,8 +9,9 @@ import { useAuth } from './AuthProvider';
 export interface AppSettings {
   sound: boolean;
   autoTimer: boolean;
-  darkMode: boolean; // read from system via useColorScheme; stored for Supabase parity
+  darkMode: boolean;
   shareProgress: boolean;
+  dataCollection: boolean;
   aiProvider: string;
   aiCustomPrompt: string;
 }
@@ -20,6 +21,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   autoTimer: true,
   darkMode: false,
   shareProgress: true,
+  dataCollection: false,
   aiProvider: 'chatgpt',
   aiCustomPrompt: '',
 };
