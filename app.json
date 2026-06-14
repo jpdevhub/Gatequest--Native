@@ -15,14 +15,14 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.gatequest.native"
+      "bundleIdentifier": "com.gatequest.app"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png"
       },
-      "package": "com.gatequest.native"
+      "package": "com.gatequest.app"
     },
     "web": {
       "bundler": "metro",
