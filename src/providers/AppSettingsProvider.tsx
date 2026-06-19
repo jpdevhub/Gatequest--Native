@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useColorScheme } from 'react-native';
 import { getUserProfile, setUserProfile } from '@/shared/utils/helper';
 import type { AppUserSettings } from '@/shared/types/AppUser';
+import type { Json } from '@/shared/types/supabase';
 import { supabase } from '@/shared/utils/supabaseClient';
 import { useAuth } from './AuthProvider';
 
@@ -51,7 +52,11 @@ export function AppSettingsProvider({ children }: { children: React.ReactNode })
 
     if (!isLogin) return;
     const timer = setTimeout(() => {
-      supabase.from('users').update({ settings }).eq('id', profile?.id ?? '').then();
+      supabase
+        .from('users')
+        .update({ settings: settings as unknown as Json })
+        .eq('id', profile?.id ?? '')
+        .then();
     }, 1500);
     return () => clearTimeout(timer);
   }, [settings, isLogin]);

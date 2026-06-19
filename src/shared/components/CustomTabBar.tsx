@@ -1,6 +1,5 @@
 import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
-import { useLinkBuilder, useTheme } from '@react-navigation/native';
-import { type BottomTabBarProps } from '@react-navigation/bottom-tabs';
+import { Tabs } from 'expo-router';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -15,6 +14,10 @@ import {
   Gear,
   Info,
 } from 'phosphor-react-native';
+
+type TabBarProps = Parameters<
+  NonNullable<React.ComponentProps<typeof Tabs>['tabBar']>
+>[0];
 
 const ICONS: Record<string, { inactive: React.ReactNode; active: React.ReactNode }> = {
   dashboard: {
@@ -83,7 +86,7 @@ function TabItem({
   );
 }
 
-export default function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
+export default function CustomTabBar({ state, navigation }: TabBarProps) {
   return (
     <View style={styles.wrapper}>
       <BlurView intensity={60} tint="dark" style={styles.blur}>

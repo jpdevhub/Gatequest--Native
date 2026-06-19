@@ -36,7 +36,7 @@ export function StatsProvider({ children }: { children: React.ReactNode }) {
    */
   const updateStats = useCallback(async () => {
     const user = getUserProfile();
-    if (!user || user.id === '1' || !userGoal?.target_exams) {
+    if (!user || user.id === '1' || user.version_number === undefined || !userGoal?.target_exams) {
       setLoading(false);
       return;
     }

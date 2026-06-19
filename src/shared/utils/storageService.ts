@@ -61,10 +61,8 @@ export const storage = {
     );
   },
 
-  nuke(): void {
+  async nuke(): Promise<void> {
     Object.keys(memCache).forEach(k => delete memCache[k]);
-    AsyncStorage.clear().catch(e =>
-      console.warn('[storage] nuke failed:', e),
-    );
+    await AsyncStorage.clear();
   },
 };
