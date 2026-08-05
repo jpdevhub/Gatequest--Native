@@ -1,4 +1,4 @@
-import Animated, { FadeInDown, FadeInRight } from 'react-native-reanimated';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import {
   View, Text, StyleSheet, ScrollView, Pressable, FlatList,
 } from 'react-native';
@@ -8,6 +8,7 @@ import { ArrowRight, BookmarkSimple } from 'phosphor-react-native';
 import { useState, useMemo } from 'react';
 
 import { useGoals, type Subject } from '@/providers/GoalProvider';
+import { getSubjects } from '@/shared/utils/questionStore';
 import {
   Pi, Binary, Cpu, Graph, GitBranch, FileCode, Calculator, LinuxLogo, Code,
   Database, Globe, TreeStructure, Bicycle, Brain, TerminalWindow, Flame,
@@ -63,48 +64,45 @@ function buildTabs(branchId?: string): { id: FilterId; label: string }[] {
 }
 
 // ── Subject card ───────────────────────────────────────────────────────────
-function SubjectCard({ subject, index, isBookmark }: { subject: Subject; index: number; isBookmark: boolean }) {
+function SubjectCard({ subject, index, questionCount }: { subject: Subject; index: number; questionCount: number }) {
   const router = useRouter();
-  const Icon = IconMap[(subject.icon_name as string) || 'default'];
-  const theme = COLOR_MAP[(subject.theme_color as string) || 'gray'] || COLOR_MAP.gray;
+  const Icon = IconMap[(subject.icon_name as string)] ?? IconMap.default;
+  const theme = COLOR_MAP[(subject.theme_color as string)] ?? COLOR_MAP.gray;
   const diff = subject.difficulty as string | undefined;
-  const diffStyle = DIFF_COLORS[diff ?? 'Medium'] || DIFF_COLORS.Medium;
+  const diffStyle = DIFF_COLORS[diff ?? 'Medium'] ?? DIFF_COLORS.Medium;
 
   const handlePress = () => {
-    router.push(`/(tabs)/practice/${subject.slug}?bookmarked=${isBookmark}` as any);
+    router.push(`/practice/${encodeURIComponent(subject.name)}` as any);
   };
 
   return (
     <Animated.View entering={FadeInDown.delay(index * 80).duration(400)}>
       <Pressable style={styles.card} onPress={handlePress}>
         <View style={styles.cardTop}>
-          {/* Icon + name */}
           <View style={styles.cardLeft}>
             <View style={[styles.iconBox, { backgroundColor: theme.bg }]}>
               <Icon size={22} color={theme.icon} weight="duotone" />
             </View>
             <View style={styles.cardInfo}>
               <Text style={styles.cardName}>{subject.name}</Text>
-              {diff && (
-                <View style={[styles.badge, { backgroundColor: diffStyle.bg }]}>
-                  <Text style={[styles.badgeText, { color: diffStyle.text }]}>{diff}</Text>
-                </View>
-              )}
+              <View style={styles.metaRow}>
+                {diff && (
+                  <View style={[styles.badge, { backgroundColor: diffStyle.bg }]}>
+                    <Text style={[styles.badgeText, { color: diffStyle.text }]}>{diff}</Text>
+                  </View>
+                )}
+                <Text style={styles.qCount}>{questionCount} questions</Text>
+              </View>
             </View>
           </View>
+          <ArrowRight size={18} color="#334155" weight="bold" />
         </View>
 
-        {/* Progress bar — always 0 (no questions yet) */}
+        {/* Progress bar */}
         <View style={styles.progressTrack}>
           <View style={[styles.progressFill, { width: '0%' }]} />
         </View>
-        <Text style={styles.progressLabel}>Progress: 0%</Text>
-
-        {/* CTA */}
-        <Pressable style={styles.btn} onPress={handlePress}>
-          <Text style={styles.btnText}>{isBookmark ? 'View Bookmarks' : 'Start Practice'}</Text>
-          <ArrowRight size={15} color="#fff" weight="bold" />
-        </Pressable>
+        <Text style={styles.progressLabel}>Progress: 0%  ·  {questionCount} total</Text>
       </Pressable>
     </Animated.View>
   );
@@ -117,30 +115,31 @@ export default function PracticeScreen() {
 
   const tabs = useMemo(() => buildTabs(userGoal?.branch_id), [userGoal]);
 
+  // Real question counts from the bundled mega.json
+  const storeSubjects = useMemo(() => getSubjects(), []);
+  const countMap = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const s of storeSubjects) m.set(s.subject, s.count);
+    return m;
+  }, [storeSubjects]);
+
   const subjects = useMemo(() => {
     const all = getPracticeSubjects();
     if (activeFilter === 'all' || activeFilter === 'bookmarked') return all;
     return all.filter((s) => s.category === activeFilter);
   }, [getPracticeSubjects, activeFilter]);
 
-  const isBookmark = activeFilter === 'bookmarked';
-
   return (
     <SafeAreaView style={styles.safe}>
       {/* Header */}
       <Animated.View entering={FadeInDown.delay(0).duration(500)} style={styles.header}>
         <Text style={styles.headerTitle}>
-          {isBookmark ? 'Your ' : 'Practice by '}
-          <Text style={styles.headerAccent}>{isBookmark ? 'Bookmarks' : 'Subject'}</Text>
+          Practice by <Text style={styles.headerAccent}>Subject</Text>
         </Text>
-        <Text style={styles.headerSub}>
-          {isBookmark
-            ? 'Select a subject to view your saved questions.'
-            : 'Select a subject and start practicing.'}
-        </Text>
+        <Text style={styles.headerSub}>Select a subject and start practicing.</Text>
       </Animated.View>
 
-      {/* Filter tabs — horizontally scrollable */}
+      {/* Filter tabs */}
       <Animated.View entering={FadeInDown.delay(80).duration(400)}>
         <ScrollView
           horizontal
@@ -175,15 +174,17 @@ export default function PracticeScreen() {
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
         renderItem={({ item, index }) => (
-          <SubjectCard subject={item} index={index} isBookmark={isBookmark} />
+          <SubjectCard
+            subject={item}
+            index={index}
+            questionCount={countMap.get(item.name) ?? 0}
+          />
         )}
         ListEmptyComponent={
           !loading ? (
             <Animated.View entering={FadeInDown.delay(200)} style={styles.empty}>
               <Text style={styles.emptyText}>
-                {userGoal
-                  ? 'No subjects found for this filter.'
-                  : 'Set your goal in settings to see subjects.'}
+                {userGoal ? 'No subjects found for this filter.' : 'Set your goal in settings to see subjects.'}
               </Text>
             </Animated.View>
           ) : null
@@ -227,10 +228,12 @@ const styles = StyleSheet.create({
   cardName: { color: '#f1f5f9', fontSize: 16, fontWeight: '600' },
   badge: { alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
   badgeText: { fontSize: 10, fontWeight: '700' },
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 2 },
+  qCount: { color: '#475569', fontSize: 11 },
 
-  progressTrack: { height: 5, backgroundColor: '#334155', borderRadius: 99, overflow: 'hidden', marginBottom: 4 },
-  progressFill: { height: 5, backgroundColor: '#3b82f6', borderRadius: 99 },
-  progressLabel: { color: '#64748b', fontSize: 11, marginBottom: 14 },
+  progressTrack: { height: 4, backgroundColor: '#334155', borderRadius: 99, overflow: 'hidden', marginBottom: 4, marginTop: 10 },
+  progressFill: { height: 4, backgroundColor: '#3b82f6', borderRadius: 99 },
+  progressLabel: { color: '#475569', fontSize: 11 },
 
   btn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',

@@ -1,5 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
+  darkMode: 'class',
   // Tell NativeWind where to scan for class usage
   content: [
     './app/**/*.{js,jsx,ts,tsx}',

@@ -1,4 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { Platform } from 'react-native';
 import { makeRedirectUri } from 'expo-auth-session';
 import * as QueryParams from 'expo-auth-session/build/QueryParams';
 import * as WebBrowser from 'expo-web-browser';
@@ -119,6 +120,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const handleGoogleLogin = async () => {
     setLoading(true);
     try {
+      if (Platform.OS === 'web') {
+        const { error } = await supabase.auth.signInWithOAuth({
+          provider: 'google',
+          options: {
+            redirectTo: window.location.origin,
+          },
+        });
+        if (error) throw error;
+        // On web, the browser will redirect automatically
+        return;
+      }
+
+      // Native flow (iOS/Android)
       const redirectTo = makeRedirectUri({
         scheme: 'gatequest',
         path: 'auth/callback',
