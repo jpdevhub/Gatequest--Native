@@ -50,11 +50,15 @@ export interface NormQuestion {
 }
 
 export function normalise(q: Question): NormQuestion {
+  let subject = q.subject;
+  if (subject === 'General Aptitude') subject = 'Aptitude';
+  if (subject === 'Programming and Data Structures') subject = 'Data Structures';
+
   return {
     id: q.id,
     year: q.year,
     questionNumber: (q.questionNumber ?? q.question_number) ?? 0,
-    subject: q.subject,
+    subject: subject,
     topic: q.topic,
     questionType: (q.questionType ?? q.question_type ?? 'multiple-choice') as QuestionType,
     question: q.question,

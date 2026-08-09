@@ -1,5 +1,6 @@
 import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
 import { Tabs } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -87,8 +88,13 @@ function TabItem({
 }
 
 export default function CustomTabBar({ state, navigation }: TabBarProps) {
+  const insets = useSafeAreaInsets();
+  // On some Androids the inset might be small or zero if the nav bar is hidden,
+  // so we ensure a minimum bottom margin of 12.
+  const safeBottom = Math.max(12, insets.bottom + 8);
+
   return (
-    <View style={styles.wrapper}>
+    <View style={[styles.wrapper, { bottom: safeBottom }]}>
       <BlurView intensity={60} tint="dark" style={styles.blur}>
         <View style={styles.bar}>
           {state.routes.map((route, index) => {
