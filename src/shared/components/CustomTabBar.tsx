@@ -1,12 +1,10 @@
-import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
+import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { Tabs } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withSpring,
-  withTiming,
-  interpolate,
 } from 'react-native-reanimated';
 import { BlurView } from 'expo-blur';
 import {
@@ -14,6 +12,8 @@ import {
   BookOpen,
   Gear,
   Info,
+  ArrowsClockwise,
+  Exam,
 } from 'phosphor-react-native';
 
 type TabBarProps = Parameters<
@@ -29,6 +29,14 @@ const ICONS: Record<string, { inactive: React.ReactNode; active: React.ReactNode
     inactive: <BookOpen size={22} color="#64748b" weight="duotone" />,
     active:   <BookOpen size={22} color="#3b82f6" weight="fill" />,
   },
+  revision: {
+    inactive: <ArrowsClockwise size={22} color="#64748b" weight="duotone" />,
+    active:   <ArrowsClockwise size={22} color="#3b82f6" weight="fill" />,
+  },
+  'topic-test': {
+    inactive: <Exam size={22} color="#64748b" weight="duotone" />,
+    active:   <Exam size={22} color="#3b82f6" weight="fill" />,
+  },
   settings: {
     inactive: <Gear size={22} color="#64748b" weight="duotone" />,
     active:   <Gear size={22} color="#3b82f6" weight="fill" />,
@@ -37,6 +45,14 @@ const ICONS: Record<string, { inactive: React.ReactNode; active: React.ReactNode
     inactive: <Info size={22} color="#64748b" weight="duotone" />,
     active:   <Info size={22} color="#3b82f6" weight="fill" />,
   },
+};
+
+const TAB_LABELS: Record<string, string> = {
+  dashboard: 'Home',
+  practice: 'Practice',
+  revision: 'Revision',
+  'topic-test': 'Tests',
+  settings: 'Settings',
 };
 
 function TabItem({
@@ -79,8 +95,8 @@ function TabItem({
       <Animated.View style={[styles.iconWrap, animStyle, isFocused && styles.iconWrapActive]}>
         {isFocused ? icons.active : icons.inactive}
       </Animated.View>
-      <Text style={[styles.label, isFocused && styles.labelActive]}>
-        {route.name.charAt(0).toUpperCase() + route.name.slice(1).replace('-', ' ')}
+      <Text style={[styles.label, isFocused && styles.labelActive]} numberOfLines={1}>
+        {TAB_LABELS[route.name] ?? route.name}
       </Text>
       {isFocused && <View style={styles.dot} />}
     </Pressable>
@@ -139,10 +155,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.08)',
   },
-  tab: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 3 },
+  tab: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 3, paddingHorizontal: 2 },
   iconWrap: { padding: 6, borderRadius: 12 },
   iconWrapActive: { backgroundColor: 'rgba(59,130,246,0.12)' },
-  label: { fontSize: 10, color: '#64748b', fontWeight: '600' },
+  label: { fontSize: 9, color: '#64748b', fontWeight: '600' },
   labelActive: { color: '#3b82f6' },
   dot: {
     position: 'absolute',

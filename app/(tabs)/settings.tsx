@@ -1,14 +1,18 @@
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import {
   View, Text, StyleSheet, ScrollView, Pressable, Switch,
-  TextInput, Alert, Image,
+  TextInput, Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
-  User, ShieldCheck, Faders, SignOut, Broom, SpinnerGap,
+  User, ShieldCheck, Faders, SignOut, Broom, SpinnerGap, Info, CaretRight, WhatsappLogo,
 } from 'phosphor-react-native';
+import { useRouter } from 'expo-router';
 import { useState, useMemo, useEffect } from 'react';
 
+import { toast } from 'sonner-native';
+import ConfirmDialog from '@/shared/components/md/ConfirmDialog';
+import { isSupportConfigured, openSupportChat } from '@/features/support/support';
 import { useAuth } from '@/providers/AuthProvider';
 import { useGoals } from '@/providers/GoalProvider';
 import { getUserProfile, setUserProfile } from '@/shared/utils/helper';
@@ -62,14 +66,14 @@ function AccountTab() {
   }, [tempBranch, branchExams, exams]);
 
   const handleSave = async () => {
-    if (tempExams.length === 0) { Alert.alert('Please select at least 1 exam.'); return; }
+    if (tempExams.length === 0) { toast.error('Please select at least 1 exam.'); return; }
     setSaving(true);
     try {
       if (user) setUserProfile({ ...user, name, college, targetYear });
       if (tempBranch) await setInitialGoal(tempBranch, tempExams, true);
-      Alert.alert('Saved!', 'Your profile has been updated.');
+      toast.success('Your profile has been updated.');
     } catch {
-      Alert.alert('Error', 'Unable to save profile.');
+      toast.error('Unable to save profile.');
     } finally {
       setSaving(false);
     }
@@ -164,16 +168,7 @@ function PrivacyTab() {
   const user = getUserProfile();
   const { settings, updateSetting } = useAppSettings();
 
-  const confirmClear = () => {
-    Alert.alert(
-      'Clear all data?',
-      `This cannot be undone. You have used ${user?.version_number}/5 resets. You will be logged out.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Clear', style: 'destructive', onPress: () => logout() },
-      ],
-    );
-  };
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   return (
     <View style={styles.tabContent}>
@@ -185,7 +180,7 @@ function PrivacyTab() {
 
       <View style={styles.btnRow}>
         {user && (user.version_number ?? 0) < 5 && (
-          <Pressable style={styles.outlineBtn} onPress={confirmClear}>
+          <Pressable style={styles.outlineBtn} onPress={() => setConfirmOpen(true)}>
             <Broom size={16} color="#94a3b8" weight="duotone" />
             <Text style={styles.outlineBtnText}>Clear Data</Text>
           </Pressable>
@@ -195,13 +190,34 @@ function PrivacyTab() {
           <Text style={styles.dangerBtnText}>Logout</Text>
         </Pressable>
       </View>
+
+      <ConfirmDialog
+        visible={confirmOpen}
+        title="Clear all data?"
+        message={`This cannot be undone. You have used ${user?.version_number ?? 0}/5 resets, and you will be logged out.`}
+        confirmLabel="Clear"
+        destructive
+        onCancel={() => setConfirmOpen(false)}
+        onConfirm={() => {
+          setConfirmOpen(false);
+          logout();
+        }}
+      />
     </View>
   );
 }
 
+const REMINDER_HOURS = [7, 9, 12, 17, 20, 22];
+const formatHour = (h: number) => {
+  const suffix = h >= 12 ? 'PM' : 'AM';
+  const hour12 = h % 12 === 0 ? 12 : h % 12;
+  return `${hour12} ${suffix}`;
+};
+
 // ── App Settings Tab ──────────────────────────────────────────────────────────
 function AppSettingsTab() {
   const { settings, updateSetting } = useAppSettings();
+  const router = useRouter();
   return (
     <View style={styles.tabContent}>
       <SettingRow label="Sound Effects" value={settings.sound} onToggle={() => updateSetting('sound', !settings.sound)} />
@@ -209,9 +225,63 @@ function AppSettingsTab() {
       <SettingRow label="Dark Mode" value={settings.darkMode} onToggle={() => updateSetting('darkMode', !settings.darkMode)} />
 
       <View style={styles.divider} />
+      <Text style={styles.sectionTitle}>Reminders</Text>
+      <SettingRow
+        label="Daily practice reminder"
+        value={settings.notifications}
+        onToggle={() => updateSetting('notifications', !settings.notifications)}
+      />
+      {settings.notifications && (
+        <>
+          <Text style={styles.reminderHint}>Remind me at</Text>
+          <View style={styles.hourRow}>
+            {REMINDER_HOURS.map((h) => {
+              const active = settings.dailyReminderHour === h;
+              return (
+                <Pressable
+                  key={h}
+                  style={[styles.pill, active && styles.pillActive]}
+                  onPress={() => updateSetting('dailyReminderHour', h)}
+                >
+                  <Text style={[styles.pillText, active && styles.pillTextActive]}>
+                    {formatHour(h)}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </>
+      )}
+
+      <View style={styles.divider} />
       <Text style={styles.sectionTitle}>App Information</Text>
       <View style={styles.infoRow}><Text style={styles.infoLabel}>Version</Text><Text style={styles.infoValue}>1.0.0</Text></View>
       <View style={styles.infoRow}><Text style={styles.infoLabel}>Platform</Text><Text style={styles.infoValue}>Android</Text></View>
+
+      <View style={styles.divider} />
+      <Text style={styles.sectionTitle}>Help & Support</Text>
+
+      {isSupportConfigured() && (
+        <Pressable
+          style={styles.supportRow}
+          onPress={() => openSupportChat({ topic: 'Support' })}
+        >
+          <WhatsappLogo size={18} color="#25D366" weight="fill" />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.linkText}>Chat with us on WhatsApp</Text>
+            <Text style={styles.supportHint}>
+              Send a screenshot or a voice note — no forms.
+            </Text>
+          </View>
+          <CaretRight size={14} color="#475569" weight="bold" />
+        </Pressable>
+      )}
+
+      <Pressable style={styles.linkRow} onPress={() => router.push('/about')}>
+        <Info size={16} color="#94a3b8" weight="duotone" />
+        <Text style={styles.linkText}>About GATEQuest</Text>
+        <CaretRight size={14} color="#475569" weight="bold" />
+      </Pressable>
     </View>
   );
 }
@@ -236,7 +306,12 @@ export default function SettingsScreen() {
 
       {/* Tab bar */}
       <Animated.View entering={FadeInDown.delay(80).duration(400)}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabsRow}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.tabsScroll}
+          contentContainerStyle={styles.tabsRow}
+        >
           {TABS.map((t) => {
             const active = activeTab === t.id;
             return (
@@ -263,12 +338,28 @@ export default function SettingsScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#0f172a' },
+  reminderHint: { color: '#64748b', fontSize: 12, marginTop: 10, marginBottom: 8 },
+  hourRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  linkRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    paddingVertical: 14, marginTop: 6,
+    borderTopWidth: 1, borderTopColor: '#1e293b',
+  },
+  linkText: { flex: 1, color: '#cbd5e1', fontSize: 14, fontWeight: '600' },
+  supportRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    paddingVertical: 14, paddingHorizontal: 12, marginTop: 4,
+    borderRadius: 12, backgroundColor: 'rgba(37,211,102,0.08)',
+    borderWidth: 1, borderColor: 'rgba(37,211,102,0.25)',
+  },
+  supportHint: { color: '#64748b', fontSize: 11, marginTop: 2 },
   header: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12 },
   headerTitle: { color: '#f1f5f9', fontSize: 26, fontWeight: '800' },
   headerAccent: { color: '#3b82f6' },
   headerSub: { color: '#64748b', fontSize: 13, marginTop: 4 },
+  tabsScroll: { flexGrow: 0, flexShrink: 0 },
 
-  tabsRow: { paddingHorizontal: 20, paddingVertical: 4, gap: 8, flexDirection: 'row' },
+  tabsRow: { paddingHorizontal: 20, paddingVertical: 4, gap: 8, flexDirection: 'row' , alignItems: 'center' },
   tab: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
     paddingHorizontal: 14, paddingVertical: 8,

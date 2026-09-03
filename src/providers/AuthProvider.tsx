@@ -7,6 +7,8 @@ import { toast } from 'sonner-native';
 import { supabase } from '@/shared/utils/supabaseClient';
 import { setUserProfile, clearUserProfile } from '@/shared/utils/helper';
 import { storage } from '@/shared/utils/storageService';
+import { nukeStorage } from '@/shared/storage/appStorage';
+import { unregisterPushToken } from '@/features/notifications/notifications';
 import type { AppUser } from '@/shared/types/AppUser';
 import type { Session } from '@supabase/supabase-js';
 
@@ -177,6 +179,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = async () => {
     setLoading(true);
+    const previousUserId = userIdRef.current;
+    if (previousUserId) await unregisterPushToken(previousUserId);
+
     const { error } = await supabase.auth.signOut();
     if (error) {
       console.error('[auth] logout failed:', error);
@@ -186,6 +191,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     await storage.nuke();
+    nukeStorage();
     userIdRef.current = null;
     setUser(null);
     setLoading(false);

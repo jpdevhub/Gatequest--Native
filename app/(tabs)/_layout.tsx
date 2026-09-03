@@ -15,8 +15,9 @@ export default function TabLayout() {
     >
       <Tabs.Screen name="dashboard" />
       <Tabs.Screen name="practice" />
+      <Tabs.Screen name="revision" />
+      <Tabs.Screen name="topic-test" />
       <Tabs.Screen name="settings" />
-      <Tabs.Screen name="about" />
     </Tabs>
   );
 }
