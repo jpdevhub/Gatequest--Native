@@ -1,364 +1,275 @@
 import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  Dimensions,
-  ScrollView,
-  ActivityIndicator,
-  Image,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withRepeat,
-  withTiming,
-  withDelay,
-  Easing,
-  FadeInDown,
-  FadeInUp,
-} from 'react-native-reanimated';
-import { useEffect } from 'react';
-import {
-  Brain,
-  ChartPieSlice,
-  Lightning,
-  Cloud,
-  Bookmark,
-  Trophy,
+    Brain,
+    ChartLineUp,
+    CheckCircle,
+    Exam,
+    Lightning,
 } from 'phosphor-react-native';
+import { useCallback, useRef, useState } from 'react';
+import {
+    ActivityIndicator,
+    Dimensions,
+    FlatList,
+    Image,
+    Pressable,
+    StyleSheet,
+    Text,
+    View,
+    type NativeScrollEvent,
+    type NativeSyntheticEvent,
+} from 'react-native';
+import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/providers/AuthProvider';
+import { md } from '@/shared/theme/material';
 
 const { width } = Dimensions.get('window');
 
-const FEATURES = [
-  { Icon: Brain, title: 'Master Every Topic', desc: 'Thousands of questions sorted by subject.' },
-  { Icon: ChartPieSlice, title: 'Track Progress', desc: 'Streaks, accuracy, and performance at a glance.' },
-  { Icon: Lightning, title: 'Fast & Focused', desc: 'Smooth, distraction-free practice interface.' },
-  { Icon: Cloud, title: 'Sync Everywhere', desc: 'Progress follows you across all your devices.' },
-  { Icon: Bookmark, title: 'Bookmark Questions', desc: 'Save key questions for focused revision.' },
-  { Icon: Trophy, title: 'Gamified Streaks', desc: 'Stay motivated with streaks and achievements.' },
+type Slide = {
+    key: string;
+    Icon: React.ElementType;
+    title: string;
+    body: string;
+    bullets: string[];
+};
+
+const SLIDES: Slide[] = [
+    {
+        key: 'practice',
+        Icon: Brain,
+        title: 'Every GATE question,\norganised',
+        body: 'Thousands of past questions sorted by subject and topic, with full solutions.',
+        bullets: ['Filter by topic, year and difficulty', 'Works offline once loaded'],
+    },
+    {
+        key: 'tests',
+        Icon: Exam,
+        title: 'Timed tests that\nmirror the real paper',
+        body: 'Build a test from the topics you choose, with negative marking and a question palette.',
+        bullets: ['Pick your weak topics', 'See exactly where your time went'],
+    },
+    {
+        key: 'progress',
+        Icon: ChartLineUp,
+        title: 'Revision that targets\nyour mistakes',
+        body: 'Questions you get wrong come back at the right time, so weak areas actually close.',
+        bullets: ['Weekly smart revision sets', 'Streaks, accuracy and subject breakdowns'],
+    },
 ];
 
-function GoogleIcon() {
-  return (
-    <View style={s.googleIconWrap}>
-      <Text style={s.googleIconG}>G</Text>
-    </View>
-  );
+function GoogleMark() {
+    return (
+        <View style={s.googleMark}>
+            <Text style={s.googleMarkText}>G</Text>
+        </View>
+    );
 }
 
-function FeatureCard({ Icon, title, desc, index }: { Icon: any; title: string; desc: string; index: number }) {
-  return (
-    <Animated.View entering={FadeInDown.delay(400 + index * 60).springify()} style={s.featureCard}>
-      <View style={s.featureIconWrap}>
-        <Icon size={20} weight="bold" color="#3b82f6" />
-      </View>
-      <View style={s.featureText}>
-        <Text style={s.featureTitle}>{title}</Text>
-        <Text style={s.featureDesc}>{desc}</Text>
-      </View>
-    </Animated.View>
-  );
-}
+function SlideView({ slide }: { slide: Slide }) {
+    const { Icon } = slide;
+    return (
+        <View style={[s.slide, { width }]}>
+            <Animated.View entering={FadeIn.duration(320)} style={s.iconWrap}>
+                <Icon size={44} color={md.color.primary} weight="duotone" />
+            </Animated.View>
 
-function PulsingOrb({ delay = 0, size = 200, top = 0, left = 0, color = 'rgba(37,99,235,0.18)' }) {
-  const scale = useSharedValue(1);
-  const opacity = useSharedValue(0.5);
+            <Text style={s.slideTitle}>{slide.title}</Text>
+            <Text style={s.slideBody}>{slide.body}</Text>
 
-  useEffect(() => {
-    scale.value = withDelay(delay, withRepeat(withTiming(1.25, { duration: 3000, easing: Easing.inOut(Easing.sin) }), -1, true));
-    opacity.value = withDelay(delay, withRepeat(withTiming(0.15, { duration: 3000, easing: Easing.inOut(Easing.sin) }), -1, true));
-  }, []);
-
-  const style = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-    opacity: opacity.value,
-  }));
-
-  return (
-    <Animated.View
-      style={[
-        {
-          position: 'absolute',
-          width: size,
-          height: size,
-          borderRadius: size / 2,
-          backgroundColor: color,
-          top,
-          left,
-        },
-        style,
-      ]}
-    />
-  );
+            <View style={s.bullets}>
+                {slide.bullets.map((bullet) => (
+                    <View key={bullet} style={s.bulletRow}>
+                        <CheckCircle size={17} color={md.color.success} weight="fill" />
+                        <Text style={s.bulletText}>{bullet}</Text>
+                    </View>
+                ))}
+            </View>
+        </View>
+    );
 }
 
 export default function LoginScreen() {
-  const { handleGoogleLogin, loading } = useAuth();
+    const { handleGoogleLogin, loading } = useAuth();
+    const listRef = useRef<FlatList<Slide>>(null);
+    const [index, setIndex] = useState(0);
 
-  return (
-    <View style={s.root}>
-      {/* Background */}
-      <View style={StyleSheet.absoluteFill}>
-        <PulsingOrb size={340} top={-80} left={width / 2 - 170} color="rgba(37,99,235,0.22)" delay={0} />
-        <PulsingOrb size={200} top={120} left={-60} color="rgba(99,102,241,0.15)" delay={800} />
-        <PulsingOrb size={160} top={320} left={width - 100} color="rgba(59,130,246,0.12)" delay={1400} />
-      </View>
+    const onScroll = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
+        const next = Math.round(e.nativeEvent.contentOffset.x / width);
+        setIndex(next);
+    }, []);
 
-      <SafeAreaView style={s.safeArea}>
-        <ScrollView
-          style={s.scroll}
-          contentContainerStyle={s.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Hero section */}
-          <Animated.View entering={FadeInDown.delay(0).springify()} style={s.hero}>
-            <Image
-              source={require('../../assets/logo.png')}
-              style={s.logo}
-              resizeMode="contain"
+    const isLast = index === SLIDES.length - 1;
+
+    const goNext = () => {
+        if (isLast) return;
+        listRef.current?.scrollToOffset({ offset: (index + 1) * width, animated: true });
+    };
+
+    return (
+        <SafeAreaView style={s.safe}>
+            <View style={s.header}>
+                <Image source={require('../../assets/logo.png')} style={s.logo} resizeMode="contain" />
+                <Text style={s.brand}>GATEQuest</Text>
+                <View style={s.headerSpacer} />
+                {!isLast && (
+                    <Pressable
+                        onPress={() =>
+                            listRef.current?.scrollToOffset({
+                                offset: (SLIDES.length - 1) * width,
+                                animated: true,
+                            })
+                        }
+                        hitSlop={10}
+                        style={s.skip}
+                    >
+                        <Text style={s.skipText}>Skip</Text>
+                    </Pressable>
+                )}
+            </View>
+
+            <FlatList
+                ref={listRef}
+                data={SLIDES}
+                keyExtractor={(item) => item.key}
+                renderItem={({ item }) => <SlideView slide={item} />}
+                horizontal
+                pagingEnabled
+                showsHorizontalScrollIndicator={false}
+                onScroll={onScroll}
+                scrollEventThrottle={16}
+                style={s.pager}
             />
-            <Text style={s.appName}>GATEQuest</Text>
-            <Text style={s.tagline}>Precision Practice for Peak{'\n'}GATE Performance</Text>
-            <Text style={s.sub}>
-              The open-source platform with a massive question bank, real-time analytics, and a
-              modern, distraction-free interface.
-            </Text>
-          </Animated.View>
 
-          {/* CTA button */}
-          <Animated.View entering={FadeInDown.delay(200).springify()} style={s.ctaWrap}>
-            <TouchableOpacity
-              style={[s.googleBtn, loading && s.googleBtnDisabled]}
-              onPress={handleGoogleLogin}
-              disabled={loading}
-              activeOpacity={0.85}
-            >
-              {loading ? (
-                <ActivityIndicator color="#fff" size="small" />
-              ) : (
-                <>
-                  <GoogleIcon />
-                  <Text style={s.googleBtnText}>Continue with Google</Text>
-                </>
-              )}
-            </TouchableOpacity>
+            <View style={s.dots}>
+                {SLIDES.map((slide, i) => (
+                    <View key={slide.key} style={[s.dot, i === index && s.dotActive]} />
+                ))}
+            </View>
 
-            <Text style={s.termsText}>
-              By continuing, you agree to our{' '}
-              <Text style={s.termsLink}>Terms of Service</Text>
-              {' '}and{' '}
-              <Text style={s.termsLink}>Privacy Policy</Text>
-            </Text>
-          </Animated.View>
+            <Animated.View entering={FadeInDown.duration(360)} style={s.footer}>
+                {isLast ? (
+                    <Pressable
+                        style={({ pressed }) => [s.cta, pressed && s.ctaPressed, loading && s.ctaDisabled]}
+                        onPress={handleGoogleLogin}
+                        disabled={loading}
+                        android_ripple={{ color: 'rgba(0,0,0,0.12)' }}
+                    >
+                        {loading ? (
+                            <ActivityIndicator color={md.color.onPrimary} size="small" />
+                        ) : (
+                            <>
+                                <GoogleMark />
+                                <Text style={s.ctaText}>Continue with Google</Text>
+                            </>
+                        )}
+                    </Pressable>
+                ) : (
+                    <Pressable
+                        style={({ pressed }) => [s.cta, pressed && s.ctaPressed]}
+                        onPress={goNext}
+                        android_ripple={{ color: 'rgba(0,0,0,0.12)' }}
+                    >
+                        <Text style={s.ctaText}>Next</Text>
+                        <Lightning size={18} color={md.color.onPrimary} weight="fill" />
+                    </Pressable>
+                )}
 
-          {/* Divider */}
-          <Animated.View entering={FadeInUp.delay(280).springify()} style={s.dividerRow}>
-            <View style={s.dividerLine} />
-            <Text style={s.dividerText}>Features</Text>
-            <View style={s.dividerLine} />
-          </Animated.View>
-
-          {/* Feature cards */}
-          <View style={s.featuresGrid}>
-            {FEATURES.map((f, i) => (
-              <FeatureCard key={i} index={i} Icon={f.Icon} title={f.title} desc={f.desc} />
-            ))}
-          </View>
-
-          {/* Footer */}
-          <Animated.View entering={FadeInUp.delay(600).springify()} style={s.footer}>
-            <Text style={s.footerText}>© {new Date().getFullYear()} GATEQuest. All Rights Reserved.</Text>
-          </Animated.View>
-        </ScrollView>
-      </SafeAreaView>
-    </View>
-  );
+                <Text style={s.terms}>
+                    By continuing you agree to our Terms of Service and Privacy Policy.
+                </Text>
+            </Animated.View>
+        </SafeAreaView>
+    );
 }
 
 const s = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: '#080f1e',
-  },
-  safeArea: {
-    flex: 1,
-  },
-  scroll: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 32,
-    alignItems: 'center',
-  },
+    safe: { flex: 1, backgroundColor: md.color.surface },
 
-  // Hero
-  hero: {
-    alignItems: 'center',
-    paddingTop: 48,
-    paddingBottom: 32,
-  },
-  logo: {
-    width: 64,
-    height: 64,
-    marginBottom: 16,
-  },
-  appName: {
-    fontSize: 40,
-    fontWeight: '800',
-    color: '#f1f5f9',
-    letterSpacing: -1,
-    marginBottom: 12,
-  },
-  tagline: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#f1f5f9',
-    textAlign: 'center',
-    lineHeight: 30,
-    marginBottom: 12,
-  },
-  taglineAccent: {
-    color: '#3b82f6',
-  },
-  sub: {
-    fontSize: 14,
-    color: '#64748b',
-    textAlign: 'center',
-    lineHeight: 22,
-    maxWidth: 320,
-  },
+    header: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: md.space.sm,
+        paddingHorizontal: md.space.xl,
+        height: 64,
+    },
+    logo: { width: 28, height: 28 },
+    brand: { ...md.type.titleMedium, color: md.color.onSurface },
+    headerSpacer: { flex: 1 },
+    skip: { padding: md.space.sm },
+    skipText: { ...md.type.labelLarge, color: md.color.onSurfaceVariant },
 
-  // CTA
-  ctaWrap: {
-    width: '100%',
-    alignItems: 'center',
-    marginBottom: 32,
-    gap: 12,
-  },
-  googleBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#1d4ed8',
-    borderRadius: 14,
-    paddingVertical: 16,
-    paddingHorizontal: 28,
-    width: '100%',
-    gap: 12,
-    shadowColor: '#3b82f6',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.35,
-    shadowRadius: 16,
-    elevation: 8,
-  },
-  googleBtnDisabled: {
-    opacity: 0.6,
-  },
-  googleIconWrap: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  googleIconG: {
-    color: '#1d4ed8',
-    fontWeight: '800',
-    fontSize: 14,
-    lineHeight: 18,
-  },
-  googleBtnText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-    letterSpacing: 0.2,
-  },
-  termsText: {
-    fontSize: 12,
-    color: '#475569',
-    textAlign: 'center',
-  },
-  termsLink: {
-    color: '#3b82f6',
-    textDecorationLine: 'underline',
-  },
+    pager: { flexGrow: 0 },
+    slide: {
+        paddingHorizontal: md.space.xl,
+        paddingTop: md.space.xxl,
+        gap: md.space.lg,
+    },
+    iconWrap: {
+        width: 88,
+        height: 88,
+        borderRadius: md.radius.lg,
+        backgroundColor: md.color.surfaceContainerHigh,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: md.space.sm,
+    },
+    slideTitle: {
+        fontSize: 30,
+        lineHeight: 38,
+        fontWeight: '700',
+        color: md.color.onSurface,
+        letterSpacing: -0.5,
+    },
+    slideBody: { ...md.type.bodyLarge, color: md.color.onSurfaceVariant },
+    bullets: { gap: md.space.md, marginTop: md.space.sm },
+    bulletRow: { flexDirection: 'row', alignItems: 'center', gap: md.space.md },
+    bulletText: { ...md.type.bodyMedium, color: md.color.onSurface, flex: 1 },
 
-  // Divider
-  dividerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    width: '100%',
-    marginBottom: 20,
-    gap: 12,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#1e293b',
-  },
-  dividerText: {
-    color: '#475569',
-    fontSize: 12,
-    fontWeight: '600',
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-  },
+    dots: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        gap: md.space.sm,
+        paddingVertical: md.space.xl,
+    },
+    dot: {
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+        backgroundColor: md.color.surfaceContainerHighest,
+    },
+    dotActive: { backgroundColor: md.color.primary, width: 24 },
 
-  // Feature cards
-  featuresGrid: {
-    width: '100%',
-    gap: 10,
-    marginBottom: 32,
-  },
-  featureCard: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    backgroundColor: 'rgba(30,41,59,0.6)',
-    borderRadius: 12,
-    padding: 14,
-    gap: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(51,65,85,0.5)',
-  },
-  featureIconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: 'rgba(59,130,246,0.12)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  featureText: {
-    flex: 1,
-  },
-  featureTitle: {
-    color: '#e2e8f0',
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 3,
-  },
-  featureDesc: {
-    color: '#64748b',
-    fontSize: 12,
-    lineHeight: 18,
-  },
-
-  // Footer
-  footer: {
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: '#1e293b',
-    width: '100%',
-    alignItems: 'center',
-  },
-  footerText: {
-    color: '#334155',
-    fontSize: 12,
-  },
+    footer: {
+        paddingHorizontal: md.space.xl,
+        paddingBottom: md.space.xl,
+        gap: md.space.md,
+        marginTop: 'auto',
+    },
+    cta: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: md.space.md,
+        height: 56,
+        borderRadius: md.radius.full,
+        backgroundColor: md.color.primary,
+        overflow: 'hidden',
+    },
+    ctaPressed: { opacity: 0.9 },
+    ctaDisabled: { opacity: 0.6 },
+    ctaText: { ...md.type.titleMedium, color: md.color.onPrimary },
+    googleMark: {
+        width: 24,
+        height: 24,
+        borderRadius: 12,
+        backgroundColor: '#fff',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    googleMarkText: { color: '#1a73e8', fontWeight: '800', fontSize: 14 },
+    terms: {
+        ...md.type.bodySmall,
+        color: md.color.onSurfaceVariant,
+        textAlign: 'center',
+    },
 });
