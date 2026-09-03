@@ -1,5 +1,5 @@
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { ScrollView, View, Text, StyleSheet, Pressable } from 'react-native';
+import { ScrollView, View, Text, StyleSheet, Pressable, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Lightning, ArrowClockwise, ChartLine, Medal } from 'phosphor-react-native';
@@ -12,16 +12,27 @@ import StudyPlan from '@/features/dashboard/components/StudyPlan';
 import StreakMap from '@/features/dashboard/components/StreakMap';
 import SubjectStats from '@/features/dashboard/components/SubjectStats';
 import ContinueSessionWidget from '@/features/dashboard/components/ContinueSessionWidget';
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
 export default function DashboardScreen() {
   const { user } = useAuth();
-  const { stats, loading } = useStats();
-  const { userGoal } = useGoals();
+  const { stats, loading, updateStats } = useStats();
+  const { userGoal, refresh: refreshGoals } = useGoals();
   const router = useRouter();
 
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await Promise.all([updateStats(), refreshGoals()]);
+    setRefreshing(false);
+  }, [updateStats, refreshGoals]);
+
   const activeExams = useMemo(() => (userGoal?.target_exams as string[]) || [], [userGoal]);
-  const [selectedExam, setSelectedExam] = useState(activeExams[0] || '');
+  // Derived, not stored: the goal loads after first render, so a useState
+  // initialiser would pin this to '' and the subject stats would never show.
+  const [examOverride, setExamOverride] = useState<string | null>(null);
+  const selectedExam = examOverride ?? activeExams[0] ?? '';
 
   const subjectStats = useMemo(
     () => stats?.subjectStatsMap?.[selectedExam.toUpperCase()] || [],
@@ -36,6 +47,9 @@ export default function DashboardScreen() {
         style={styles.scroll}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#3b82f6" colors={['#3b82f6']} />
+        }
       >
         {/* Welcome */}
         <Animated.View entering={FadeInDown.delay(0).duration(500)} style={styles.welcome}>
@@ -55,11 +69,11 @@ export default function DashboardScreen() {
         <Animated.View entering={FadeInDown.delay(200).duration(500)}>
           <Text style={styles.sectionLabel}>SMART ACTIONS</Text>
           <View style={styles.actionsRow}>
-            <Pressable style={styles.actionBtn} onPress={() => router.push('/practice')}>
+            <Pressable style={styles.actionBtn} onPress={() => router.push('/topic-test')}>
               <Lightning size={20} color="#fff" weight="fill" />
               <Text style={styles.actionText}>Topic Test</Text>
             </Pressable>
-            <Pressable style={styles.actionBtn} onPress={() => router.push('/practice')}>
+            <Pressable style={styles.actionBtn} onPress={() => router.push('/revision')}>
               <ArrowClockwise size={20} color="#fff" weight="bold" />
               <Text style={styles.actionText}>Smart Revision</Text>
             </Pressable>
@@ -102,7 +116,7 @@ export default function DashboardScreen() {
               <Pressable
                 key={exam}
                 style={[styles.examTab, selectedExam === exam && styles.examTabActive]}
-                onPress={() => setSelectedExam(exam)}
+                onPress={() => setExamOverride(exam)}
               >
                 <Text style={[styles.examText, selectedExam === exam && styles.examTextActive]}>
                   {exam.toUpperCase()}

@@ -55,8 +55,8 @@ export default function ContinueSessionWidget() {
     }
   } else if (segments[0] === 'revision') {
     accent = '#fb923c'; iconBg = 'rgba(249,115,22,0.12)'; badgeBg = iconBg;
-    if (segments[1] && segments[2] && segments[3]) {
-      title = `Smart Revision: ${formatSlug(segments[2])}`; badge = 'Revision Card'; Icon = Target;
+    if (segments[1] && segments[2]) {
+      title = 'Smart Revision Card'; badge = 'Revision Card'; Icon = Target;
     } else if (segments[1]) {
       title = 'Smart Revision List'; badge = 'Revision Queue'; Icon = Highlighter;
     } else {

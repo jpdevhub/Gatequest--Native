@@ -6,8 +6,9 @@ export default function StudyPlan() {
   const { stats, loading } = useStats();
   if (loading) return null;
 
-  const { dailyQuestionTarget, uniqueAttemptCount } = stats.studyPlan;
-  const todayCount = uniqueAttemptCount;
+  const { dailyQuestionTarget, todayUniqueAttemptCount } = stats.studyPlan;
+  // Today's progress must use today's count, not the lifetime total.
+  const todayCount = todayUniqueAttemptCount;
   const percent = dailyQuestionTarget > 0 ? Math.min(100, Math.round((todayCount / dailyQuestionTarget) * 100)) : 0;
   const isMet = percent >= 100;
   const remaining = Math.max(0, dailyQuestionTarget - todayCount);

@@ -1,5 +1,5 @@
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import type { Stats } from '@/shared/types/Stats';
 
 type Props = { stats: Stats };
@@ -41,14 +41,14 @@ export default function StreakMap({ stats }: Props) {
       <Text style={styles.heading}>Streak Map</Text>
       <View style={styles.streakRow}>
         <Text style={styles.streakLabel}>
-          Longest: <Text style={styles.yellow}>{stats.streaks.longest}</Text>
+          Longest: <Text style={styles.yellow}>{stats.streaks.study_longest}</Text>
         </Text>
         <Text style={styles.streakLabel}>
-          Current: <Text style={styles.green}>{stats.streaks.current}</Text>
+          Current: <Text style={styles.green}>{stats.streaks.study_current}</Text>
         </Text>
       </View>
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.scroll}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ alignItems: 'flex-start' }} style={styles.scroll}>
         <View style={styles.grid}>
           {weeks.map((week, wi) => (
             <View key={wi} style={styles.weekCol}>
