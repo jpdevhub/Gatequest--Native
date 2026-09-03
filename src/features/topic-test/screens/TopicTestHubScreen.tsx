@@ -5,7 +5,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { ArrowLeft, ChartLineUp, Clock, Play, Plus, Target, Timer, TrayArrowDown } from 'phosphor-react-native';
 import { useCallback, useMemo, useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { toast } from 'sonner-native';
 import { updateTestStatus } from '@/features/topic-test/api/topicTest';
 import useTopicTestHubData from '@/features/topic-test/hooks/useTopicTestHubData';
@@ -32,6 +32,7 @@ export default function TopicTestHubScreen() {
     const { userGoal } = useGoals();
     const [starting, setStarting] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
+    const insets = useSafeAreaInsets();
 
     const { loading, activeTest, history, refresh } = useTopicTestHubData(
         user?.id,
@@ -92,7 +93,7 @@ export default function TopicTestHubScreen() {
             </View>
 
             <ScrollView
-                contentContainerStyle={s.content}
+                contentContainerStyle={[s.content, { paddingBottom: 120 + insets.bottom }]}
                 showsVerticalScrollIndicator={false}
                 refreshControl={
                     <RefreshControl
@@ -209,7 +210,7 @@ export default function TopicTestHubScreen() {
             </ScrollView>
 
             {activeTest && (
-                <View style={s.bottomBar}>
+                <View style={[s.bottomBar, { paddingBottom: Math.max(insets.bottom, md.space.md) }]}>
                     <Text style={s.bottomHint} numberOfLines={1}>
                         Finish your active test to start a new one
                     </Text>
@@ -304,7 +305,7 @@ const s = StyleSheet.create({
 
     bottomBar: {
         paddingHorizontal: md.space.lg,
-        paddingVertical: md.space.md,
+        paddingTop: md.space.md,
         backgroundColor: md.color.surfaceContainer,
         borderTopWidth: 1,
         borderTopColor: md.color.outlineVariant,

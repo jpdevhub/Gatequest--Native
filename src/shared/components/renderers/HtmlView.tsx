@@ -47,6 +47,10 @@ function HtmlViewInner(
             javaScriptEnabled
             androidLayerType="hardware"
             setSupportMultipleWindows={false}
+            // Question diagrams are immutable, so a revisited question should
+            // paint from cache instead of refetching.
+            cacheEnabled
+            cacheMode="LOAD_CACHE_ELSE_NETWORK"
             showsVerticalScrollIndicator={false}
             onLoadEnd={onReady}
             onShouldStartLoadWithRequest={(request) => {

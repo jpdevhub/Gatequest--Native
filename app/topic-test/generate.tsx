@@ -6,7 +6,7 @@ import { useRouter } from 'expo-router';
 import { ArrowLeft, CaretDown, Check, Minus, Plus } from 'phosphor-react-native';
 import { useMemo, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { toast } from 'sonner-native';
 import { generateTopicTest } from '@/features/topic-test/api/topicTest';
 import TopicsSelection from '@/features/topic-test/components/TopicsSelection';
@@ -32,6 +32,7 @@ export default function TopicTestGenerateScreen() {
     const [questionLimit, setQuestionLimit] = useState(20);
     const [includeAttempted, setIncludeAttempted] = useState(false);
     const [isGenerating, setIsGenerating] = useState(false);
+    const insets = useSafeAreaInsets();
 
     const {
         availableTopics,
@@ -218,7 +219,7 @@ export default function TopicTestGenerateScreen() {
             </ScrollView>
 
             {/* Bottom bar */}
-            <View style={s.bottomBar}>
+            <View style={[s.bottomBar, { paddingBottom: Math.max(insets.bottom, md.space.lg) }]}>
                 <View style={s.bottomInfo}>
                     <Text style={s.bottomValue}>{finalQuestionCount} questions</Text>
                     <Text style={s.bottomLabel}>about {estimatedTime} min</Text>
@@ -346,7 +347,6 @@ const s = StyleSheet.create({
         gap: md.space.lg,
         paddingHorizontal: md.space.lg,
         paddingTop: md.space.md,
-        paddingBottom: md.space.lg,
         backgroundColor: md.color.surfaceContainer,
         borderTopWidth: 1,
         borderTopColor: md.color.outlineVariant,

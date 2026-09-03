@@ -151,6 +151,7 @@ export default function ActiveTest() {
                 onMarkForReview={() => answers.toggleReview(currentQ.id, attemptOrder)}
                 onClearResponse={() => answers.selectOption(currentQ.id, null, attemptOrder)}
                 onTogglePalette={() => setIsPaletteOpen(true)}
+                onSubmit={() => setConfirmEnd(true)}
             />
 
             <ConfirmDialog

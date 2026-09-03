@@ -52,6 +52,7 @@ const baseCss = (fontSize: number) => `
     max-width: 100%; height: auto; border-radius: 8px;
     background: #fff; padding: 6px;
   }
+  .opt .img-wrap img { max-height: 220px; width: auto; }
 
   .code-wrap { margin: 12px 0; border: 1px solid ${theme.border}; border-radius: 10px; overflow: hidden; background: #0b1220; }
   .code-lang { font: 600 11px/1 ui-monospace, Menlo, monospace; color: ${theme.muted}; padding: 8px 12px; border-bottom: 1px solid ${theme.border}; text-transform: uppercase; letter-spacing: 0.08em; }
@@ -124,8 +125,16 @@ const runtime = `
   }
 
   var lastHeight = 0;
+  function measure() {
+    var root = document.getElementById('root');
+    return Math.ceil(Math.max(
+      root ? root.getBoundingClientRect().bottom : 0,
+      document.body ? document.body.scrollHeight : 0,
+      document.documentElement.scrollHeight
+    ));
+  }
   function postHeight() {
-    var h = Math.ceil(document.documentElement.scrollHeight);
+    var h = measure();
     if (h > 0 && h !== lastHeight) {
       lastHeight = h;
       send({ type: 'height', height: h });
@@ -136,13 +145,34 @@ const runtime = `
   function boot() {
     renderMath(document);
     postHeight();
-    // Images and fonts settle after first paint.
+
+    // Fonts and KaTeX settle a few frames after first paint.
     setTimeout(postHeight, 60);
     setTimeout(postHeight, 300);
-    setTimeout(postHeight, 900);
-    if (window.ResizeObserver) {
-      new ResizeObserver(postHeight).observe(document.documentElement);
+
+    // Observe the content root, not documentElement: in a WebView the html box
+    // is viewport-constrained and never reports growth, so the height would
+    // stay stale and the question would render clipped.
+    var root = document.getElementById('root');
+    if (window.ResizeObserver && root) {
+      new ResizeObserver(postHeight).observe(root);
     }
+
+    // Remote question diagrams can land well after load; each one changes layout.
+    Array.prototype.forEach.call(document.images || [], function (img) {
+      if (img.complete) return;
+      img.addEventListener('load', postHeight);
+      img.addEventListener('error', postHeight);
+    });
+
+    // Safety net for slow images on mobile data, in case no observer fires.
+    var ticks = 0;
+    var poll = setInterval(function () {
+      postHeight();
+      if (++ticks >= 40) clearInterval(poll);
+    }, 250);
+
+    window.addEventListener('load', postHeight);
     document.addEventListener('load', postHeight, true);
 
     document.addEventListener('click', function (event) {

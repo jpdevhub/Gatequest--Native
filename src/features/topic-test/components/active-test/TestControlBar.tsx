@@ -1,4 +1,4 @@
-import { ArrowLeft, ArrowRight, Eraser, Flag, GridFour } from 'phosphor-react-native';
+import { ArrowLeft, ArrowRight, Check, Eraser, Flag, GridFour } from 'phosphor-react-native';
 import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Button from '@/shared/components/md/Button';
@@ -13,6 +13,7 @@ type TestControlBarProps = {
     onMarkForReview: () => void;
     onClearResponse: () => void;
     onTogglePalette: () => void;
+    onSubmit: () => void;
 };
 
 export default function TestControlBar({
@@ -24,6 +25,7 @@ export default function TestControlBar({
     onMarkForReview,
     onClearResponse,
     onTogglePalette,
+    onSubmit,
 }: TestControlBarProps) {
     const insets = useSafeAreaInsets();
 
@@ -64,13 +66,21 @@ export default function TestControlBar({
                     style={s.grow}
                     icon={(c, size) => <ArrowLeft size={size} color={c} weight="bold" />}
                 />
-                <Button
-                    label="Next"
-                    onPress={onNext}
-                    disabled={isLast}
-                    style={s.grow}
-                    icon={(c, size) => <ArrowRight size={size} color={c} weight="bold" />}
-                />
+                {isLast ? (
+                    <Button
+                        label="Submit test"
+                        onPress={onSubmit}
+                        style={s.grow}
+                        icon={(c, size) => <Check size={size} color={c} weight="bold" />}
+                    />
+                ) : (
+                    <Button
+                        label="Next"
+                        onPress={onNext}
+                        style={s.grow}
+                        icon={(c, size) => <ArrowRight size={size} color={c} weight="bold" />}
+                    />
+                )}
             </View>
         </View>
     );

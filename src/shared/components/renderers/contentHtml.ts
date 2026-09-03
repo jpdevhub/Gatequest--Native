@@ -289,8 +289,10 @@ const mathBlock = (content: string) =>
 function imageUrl(src: string, cloudName?: string): string {
     if (!src) return '';
     if (!cloudName) return src;
-    // Mirrors the PWA's Cloudinary fetch proxy (auto format + quality).
-    return `https://res.cloudinary.com/${cloudName}/image/fetch/f_auto,q_auto/${encodeURIComponent(src)}`;
+    // Cloudinary fetch proxy. Beyond the PWA's f_auto/q_auto this caps the
+    // width: question diagrams are often scanned at 2000px+, and a phone never
+    // needs more than ~900, which is most of the download time on mobile data.
+    return `https://res.cloudinary.com/${cloudName}/image/fetch/f_auto,q_auto,w_900,c_limit/${encodeURIComponent(src)}`;
 }
 
 function renderSegments(text: string, cloudName?: string): string {

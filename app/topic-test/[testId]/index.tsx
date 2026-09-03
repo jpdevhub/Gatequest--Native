@@ -6,7 +6,7 @@ import { ArrowLeft, CheckCircle, Play, Question, Timer, WarningCircle } from 'ph
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { toast } from 'sonner-native';
 import { fetchTestById, updateTestStatus } from '@/features/topic-test/api/topicTest';
 import { syncTestFromSupabase } from '@/features/topic-test/services/testSyncService';
@@ -14,6 +14,7 @@ import { useAuth } from '@/providers/AuthProvider';
 import { useGoals } from '@/providers/GoalProvider';
 import { ModernLoader } from '@/shared/components/ModernLoader';
 import PageHeader from '@/shared/components/PageHeader';
+import { md } from '@/shared/theme/material';
 import type { TestSession } from '@/shared/types/storage';
 
 const RULES: { id: string; text: string; warning?: boolean }[] = [
@@ -32,6 +33,7 @@ export default function TopicTestLobby() {
     const [testData, setTestData] = useState<TestSession | null>(null);
     const [loading, setLoading] = useState(true);
     const [starting, setStarting] = useState(false);
+    const insets = useSafeAreaInsets();
 
     useEffect(() => {
         if (!testId) return;
@@ -143,7 +145,7 @@ export default function TopicTestLobby() {
                 </Animated.View>
             </ScrollView>
 
-            <View style={s.footer}>
+            <View style={[s.footer, { paddingBottom: Math.max(insets.bottom, md.space.lg) }]}>
                 <Pressable
                     style={({ pressed }) => [s.startBtn, starting && s.disabled, pressed && s.pressed]}
                     onPress={handleStartTest}
