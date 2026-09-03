@@ -1,5 +1,4 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { useColorScheme } from 'react-native';
 import { getUserProfile, setUserProfile } from '@/shared/utils/helper';
 import type { AppUserSettings } from '@/shared/types/AppUser';
 import type { Json } from '@/shared/types/supabase';
@@ -15,6 +14,9 @@ export interface AppSettings {
   dataCollection: boolean;
   aiProvider: string;
   aiCustomPrompt: string;
+  notifications: boolean;
+  /** Hour of day (0-23) for the local daily practice reminder. */
+  dailyReminderHour: number;
 }
 
 const DEFAULT_SETTINGS: AppSettings = {
@@ -25,6 +27,8 @@ const DEFAULT_SETTINGS: AppSettings = {
   dataCollection: false,
   aiProvider: 'chatgpt',
   aiCustomPrompt: '',
+  notifications: false,
+  dailyReminderHour: 20,
 };
 
 interface AppSettingsContextType {
