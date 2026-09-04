@@ -18,7 +18,16 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "package": "com.gatequest.app",
-      "versionCode": 1
+      "versionCode": 1,
+      "enableProguardInReleaseBuilds": true,
+      "enableShrinkResourcesInReleaseBuilds": true,
+      "splits": {
+        "abi": {
+          "enable": true,
+          "universalApk": false,
+          "include": ["arm64-v8a", "armeabi-v7a"]
+        }
+      }
     },
     "web": {
       "bundler": "metro",
