@@ -1,8 +1,11 @@
 name: Android APK
 
+# Fires ONLY when you push a version tag  (e.g. git tag v1.2.3 && git push --tags)
+# A lightweight lint/type-check job still runs on every PR so you catch issues early.
 on:
   push:
-    branches: [master]
+    tags:
+      - 'v*'
   pull_request:
     branches: [master]
   workflow_dispatch:
@@ -11,9 +14,10 @@ concurrency:
   group: apk-${{ github.ref }}
   cancel-in-progress: true
 
+# ── 1. Verify (runs on every PR — fast, no Android toolchain needed) ──────────
 jobs:
   verify:
-    name: Type-check and lint
+    name: Type-check & lint
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -23,59 +27,48 @@ jobs:
           node-version: '22'
           cache: 'npm'
 
-      - name: Install dependencies
-        run: npm ci --legacy-peer-deps
+      - run: npm ci --legacy-peer-deps
 
-      - name: Type-check
-        run: npm run type-check
+      - run: npm run type-check
 
-      - name: Lint
-        run: npm run lint
+      - run: npm run lint
 
+# ── 2. Build (runs only when a version tag triggers the workflow) ─────────────
   build:
-    name: Build APK
+    name: Build & sign APK
+    # Skip the full build on PRs — verify is enough there.
+    if: github.event_name != 'pull_request'
     needs: verify
     runs-on: ubuntu-latest
     env:
       HAS_KEYSTORE: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
       EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
-      # The key was historically stored under the ANON_KEY name; accept either.
       EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY || secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
       EXPO_PUBLIC_SUPPORT_WHATSAPP: ${{ secrets.EXPO_PUBLIC_SUPPORT_WHATSAPP }}
       EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME: ${{ secrets.EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME }}
+      # Speed up Gradle
+      GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.parallel=true -Dorg.gradle.workers.max=4 -Dorg.gradle.configureondemand=true -Dkotlin.incremental=false -XX:+HeapDumpOnOutOfMemoryError -Xmx4g -XX:MaxMetaspaceSize=512m"
 
     steps:
       - uses: actions/checkout@v4
 
       - name: Free disk space
-        run: |
-          sudo rm -rf /usr/share/dotnet /opt/ghc /opt/hostedtoolcache/CodeQL
+        run: sudo rm -rf /usr/share/dotnet /opt/ghc /opt/hostedtoolcache/CodeQL
 
       - uses: actions/setup-java@v4
         with:
           java-version: '17'
-          distribution: 'zulu'
+          distribution: 'temurin'   # temurin is faster to download than zulu
 
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: 'npm'
 
-      - name: Cache Gradle
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: ${{ runner.os }}-gradle-
-
-      - name: Install dependencies
+      - name: Install JS dependencies
         run: npm ci --legacy-peer-deps
 
-      # EXPO_PUBLIC_* values are read at bundle time, so they must exist on disk
-      # before prebuild. They are public by design — never put secrets here.
-      - name: Write environment file
+      - name: Write .env
         run: |
           {
             echo "EXPO_PUBLIC_SUPABASE_URL=${EXPO_PUBLIC_SUPABASE_URL}"
@@ -94,22 +87,42 @@ jobs:
       - name: Prebuild Android project
         run: npx expo prebuild --platform android --no-install
 
+      # Cache Gradle after prebuild so the wrapper and generated files are included
+      - name: Restore Gradle cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            ~/.gradle/build-cache
+          key: ${{ runner.os }}-gradle-${{ hashFiles('android/**/*.gradle*', 'android/**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      # Cache the React Native / Metro bundler output
+      - name: Restore Metro cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.metro-cache
+          key: ${{ runner.os }}-metro-${{ hashFiles('package-lock.json') }}
+          restore-keys: ${{ runner.os }}-metro-
+
       - name: Build debug APK
         if: env.HAS_KEYSTORE != 'true'
-        run: ./gradlew assembleDebug -PbundleInDebug=true --no-daemon
+        run: ./gradlew assembleDebug --build-cache --no-daemon --parallel
         working-directory: android
 
       - name: Upload debug APK
         if: env.HAS_KEYSTORE != 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: gatequest-debug-apk
+          name: gatequest-debug-${{ github.ref_name }}
           path: android/app/build/outputs/apk/debug/app-debug.apk
           retention-days: 7
 
       - name: Build release APK
         if: env.HAS_KEYSTORE == 'true'
-        run: ./gradlew assembleRelease --no-daemon
+        run: ./gradlew assembleRelease --build-cache --no-daemon --parallel
         working-directory: android
 
       - name: Sign release APK
@@ -129,6 +142,6 @@ jobs:
         if: env.HAS_KEYSTORE == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: gatequest-release-apk
+          name: gatequest-${{ github.ref_name }}
           path: ${{ steps.sign_app.outputs.signedReleaseFile }}
-          retention-days: 30
+          retention-days: 90
