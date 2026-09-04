@@ -8,7 +8,6 @@ import {
 } from 'phosphor-react-native';
 import { useState } from 'react';
 
-// ── FAQ Data (ported from PWA faqs.ts) ───────────────────────────────────────
 const FAQS = [
   {
     question: 'What is GATEQuest?',
@@ -44,7 +43,6 @@ const FAQS = [
   },
 ];
 
-// ── Accordion FAQ Item ────────────────────────────────────────────────────────
 function FaqItem({ question, answer, index }: { question: string; answer: string; index: number }) {
   const [open, setOpen] = useState(false);
   return (
@@ -60,7 +58,6 @@ function FaqItem({ question, answer, index }: { question: string; answer: string
   );
 }
 
-// ── Link Button ───────────────────────────────────────────────────────────────
 function LinkBtn({ icon, label, url, bg }: { icon: React.ReactNode; label: string; url: string; bg: string }) {
   return (
     <Pressable style={[styles.linkBtn, { backgroundColor: bg }]} onPress={() => Linking.openURL(url)}>
@@ -70,7 +67,6 @@ function LinkBtn({ icon, label, url, bg }: { icon: React.ReactNode; label: strin
   );
 }
 
-// ── Main Screen ───────────────────────────────────────────────────────────────
 export default function AboutScreen() {
   return (
     <SafeAreaView style={styles.safe}>

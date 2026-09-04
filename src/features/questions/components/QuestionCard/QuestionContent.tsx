@@ -20,14 +20,6 @@ type QuestionContentProps = {
 
 const OPTION_LABELS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
 
-/**
- * Renders the question body and its options as one document.
- *
- * Keeping both together is what makes this fast: a question with four LaTeX
- * options would otherwise need five separate renderers. Selection state is
- * pushed in with `applyState` rather than rebuilding the document, so tapping an
- * option never reloads or re-typesets anything.
- */
 function QuestionContent({
     env,
     currentQuestion,

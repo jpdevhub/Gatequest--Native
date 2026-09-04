@@ -18,10 +18,8 @@ import { useGoals } from '@/providers/GoalProvider';
 import { getUserProfile, setUserProfile } from '@/shared/utils/helper';
 import { useAppSettings } from '@/providers/AppSettingsProvider';
 
-// ── Types ────────────────────────────────────────────────────────────────────
 type TabId = 'account' | 'privacy' | 'app-settings';
 
-// ── Reusable RowToggle ────────────────────────────────────────────────────────
 function SettingRow({ label, value, onToggle, disabled = false }: {
   label: string; value: boolean; onToggle: () => void; disabled?: boolean;
 }) {
@@ -40,7 +38,6 @@ function SettingRow({ label, value, onToggle, disabled = false }: {
   );
 }
 
-// ── Account Tab ───────────────────────────────────────────────────────────────
 function AccountTab() {
   const user = getUserProfile();
   const { userGoal, branches, exams, branchExams, setInitialGoal, loading: goalsLoading } = useGoals();
@@ -162,7 +159,6 @@ function AccountTab() {
   );
 }
 
-// ── Privacy Tab ───────────────────────────────────────────────────────────────
 function PrivacyTab() {
   const { logout } = useAuth();
   const user = getUserProfile();
@@ -214,7 +210,6 @@ const formatHour = (h: number) => {
   return `${hour12} ${suffix}`;
 };
 
-// ── App Settings Tab ──────────────────────────────────────────────────────────
 function AppSettingsTab() {
   const { settings, updateSetting } = useAppSettings();
   const router = useRouter();
@@ -286,7 +281,6 @@ function AppSettingsTab() {
   );
 }
 
-// ── Main Screen ───────────────────────────────────────────────────────────────
 const TABS: { id: TabId; label: string; Icon: any }[] = [
   { id: 'account',      label: 'Account',      Icon: User },
   { id: 'privacy',      label: 'Privacy & Data', Icon: ShieldCheck },

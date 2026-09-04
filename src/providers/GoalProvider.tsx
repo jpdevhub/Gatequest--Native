@@ -2,8 +2,7 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useR
 import { supabase } from '@/shared/utils/supabaseClient';
 import { toast } from 'sonner-native';
 
-// ── Types (mirrors PWA GoalContext.ts) ──────────────────────────────────────
-// Using plain interfaces to avoid requiring the generated supabase.ts at this stage.
+
 export interface Branch { id: string; name: string; [key: string]: unknown; }
 export interface Exam { id: string; name: string; [key: string]: unknown; }
 export interface BranchExam { branch_id: string; exam_id: string; [key: string]: unknown; }
@@ -40,7 +39,7 @@ export function GoalProvider({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const fetchedRef = useRef(false);
 
-  // Exact port from PWA GoalProvider.tsx
+
   const fetchData = useCallback(async (force = false) => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session || (fetchedRef.current && !force)) return;
